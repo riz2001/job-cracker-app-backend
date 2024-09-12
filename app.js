@@ -12,7 +12,7 @@ let app = express();
 app.use(express.json());
 app.use(cors());
 
-mongoose.connect("mongodb+srv://rizwan2001:rizwan2001@cluster0.6ucejfl.mongodb.net/preg?retryWrites=true&w=majority&appName=Cluster0");
+mongoose.connect("mongodb+srv://rizwan2001:rizwan2001@cluster0.6ucejfl.mongodb.net/jobcrackerDB?retryWrites=true&w=majority&appName=Cluster0");
 
 // User Sign-In
 app.post("/signin", async (req, res) => {
