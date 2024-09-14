@@ -7,6 +7,7 @@ const userModel = require("./models/users");
 const adminModel = require("./models/admin");
 const jobModel = require("./models/job");
 const registrationModel = require("./models/registration");
+const Question = require('./models/Question');
 
 let app = express();
 app.use(express.json());
@@ -106,6 +107,10 @@ app.post("/AdminSignIn", async (req, res) => {
     }
 });
 
+
+// Route to handle storing multiple questions for the same week
+
+
 // Admin Sign-Up
 app.post("/AdminSignUp", async (req, res) => {
     try {
@@ -171,6 +176,109 @@ app.get("/ViewRegistrations", async (req, res) => {
         res.json({ "status": "error", "message": error.message });
     }
 });
+
+
+app.post('/api/questions', async (req, res) => {
+    const questions = req.body;
+  
+    // Log the incoming request body
+    console.log('Incoming questions:', questions);
+  
+    if (!Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({ error: 'No questions provided' });
+    }
+  
+    const week = questions[0].week; 
+    const validQuestions = questions.every(q => q.week === week);
+  
+    if (!validQuestions) {
+      return res.status(400).json({ error: 'All questions must be for the same week' });
+    }
+  
+    try {
+      // Insert multiple questions into the database
+      const result = await Question.insertMany(questions);
+      res.status(201).json({ message: 'Questions added successfully!', result });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+
+//weeks
+  app.get('/api/weeks', async (req, res) => {
+    try {
+      const weeks = await Question.distinct('week');
+      res.json(weeks);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+
+app.get('/api/questions/:week', async (req, res) => {
+    const weekNumber = req.params.week;
+  
+    try {
+      const questions = await Question.find({ week: weekNumber });
+      if (questions.length === 0) {
+        return res.status(404).json({ message: 'No questions found for this week' });
+      }
+      res.json(questions);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  
+  // Route to handle quiz submission and evaluate answers
+  app.post('/api/submit-quiz', async (req, res) => {
+      const { week, answers } = req.body; // Expecting an array of { questionId, answer }
+    
+      if (!Array.isArray(answers) || answers.length === 0) {
+        return res.status(400).json({ message: 'No answers provided' });
+      }
+    
+      try {
+        // Fetch questions for the specified week
+        const questions = await Question.find({ week });
+    
+        // Create a map for quick lookup of correct answers
+        const correctAnswersMap = questions.reduce((acc, question) => {
+          acc[question._id.toString()] = question.answer;
+          return acc;
+        }, {});
+        
+  
+      
+    
+    
+        // Evaluate answers
+        let score = 0;
+        const results = answers.map(answer => {
+          const correctAnswer = correctAnswersMap[answer.questionId];
+          const isCorrect = correctAnswer && correctAnswer === answer.answer;
+          if (isCorrect) {
+            score++;
+          }
+          return {
+            questionId: answer.questionId,
+            userAnswer: answer.answer,
+            correctAnswer,
+            isCorrect,
+          };
+        });
+    
+        res.json({
+          score,
+          totalQuestions: questions.length,
+          results, // Include detailed results
+        });
+      } catch (error) {
+        res.status(500).json({ message: 'Error processing quiz submission' });
+      }
+    });
+   
 
 app.listen(3030, () => {
     console.log("Server started on port 3030");
