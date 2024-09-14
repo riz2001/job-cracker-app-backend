@@ -109,6 +109,31 @@ app.post("/AdminSignIn", async (req, res) => {
 
 
 // Route to handle storing multiple questions for the same week
+app.post('/api/questions', async (req, res) => {
+    const questions = req.body;
+  
+    // Log the incoming request body
+    console.log('Incoming questions:', questions);
+  
+    if (!Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({ error: 'No questions provided' });
+    }
+  
+    const week = questions[0].week; 
+    const validQuestions = questions.every(q => q.week === week);
+  
+    if (!validQuestions) {
+      return res.status(400).json({ error: 'All questions must be for the same week' });
+    }
+  
+    try {
+      // Insert multiple questions into the database
+      const result = await Question.insertMany(questions);
+      res.status(201).json({ message: 'Questions added successfully!', result });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
 
 
 // Admin Sign-Up
@@ -178,35 +203,7 @@ app.get("/ViewRegistrations", async (req, res) => {
 });
 
 
-app.post('/api/questions', async (req, res) => {
-    const questions = req.body;
-  
-    // Log the incoming request body
-    console.log('Incoming questions:', questions);
-  
-    if (!Array.isArray(questions) || questions.length === 0) {
-      return res.status(400).json({ error: 'No questions provided' });
-    }
-  
-    const week = questions[0].week; 
-    const validQuestions = questions.every(q => q.week === week);
-  
-    if (!validQuestions) {
-      return res.status(400).json({ error: 'All questions must be for the same week' });
-    }
-  
-    try {
-      // Insert multiple questions into the database
-      const result = await Question.insertMany(questions);
-      res.status(201).json({ message: 'Questions added successfully!', result });
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-
-
-//weeks
-  app.get('/api/weeks', async (req, res) => {
+app.get('/api/weeks', async (req, res) => {
     try {
       const weeks = await Question.distinct('week');
       res.json(weeks);
@@ -214,9 +211,39 @@ app.post('/api/questions', async (req, res) => {
       res.status(500).json({ error: error.message });
     }
   });
-
-
-app.get('/api/questions/:week', async (req, res) => {
+  
+  
+    
+  // Route to handle storing multiple questions for the same week
+  app.post('/api/questions', async (req, res) => {
+      const questions = req.body;
+    
+      // Log the incoming request body
+      console.log('Incoming questions:', questions);
+    
+      if (!Array.isArray(questions) || questions.length === 0) {
+        return res.status(400).json({ error: 'No questions provided' });
+      }
+    
+      const week = questions[0].week; 
+      const validQuestions = questions.every(q => q.week === week);
+    
+      if (!validQuestions) {
+        return res.status(400).json({ error: 'All questions must be for the same week' });
+      }
+    
+      try {
+        // Insert multiple questions into the database
+        const result = await Question.insertMany(questions);
+        res.status(201).json({ message: 'Questions added successfully!', result });
+      } catch (error) {
+        res.status(400).json({ error: error.message });
+      }
+    });
+    
+  
+  // Route to retrieve all questions for a specific week (user)
+  app.get('/api/questions/:week', async (req, res) => {
     const weekNumber = req.params.week;
   
     try {
@@ -248,7 +275,6 @@ app.get('/api/questions/:week', async (req, res) => {
           acc[question._id.toString()] = question.answer;
           return acc;
         }, {});
-        
   
       
     
